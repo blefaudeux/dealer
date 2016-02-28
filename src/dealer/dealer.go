@@ -1,5 +1,5 @@
 // dealer.go
-package main
+package dealer
 
 import (
 	"bufio"
@@ -16,7 +16,7 @@ func (s *Socket) printout(message string) {
 	fmt.Println("Socket " + s.addr + ":" + s.port + " : " + message)
 }
 
-func (s *Socket) connect(addr string, port string) {
+func (s *Socket) Connect(addr string, port string) {
 	s.addr = addr
 	s.port = port
 	conn, err := net.Dial("tcp", s.addr+":"+s.port)
@@ -30,24 +30,24 @@ func (s *Socket) connect(addr string, port string) {
 	s.printout("Connection accepted")
 }
 
-func (s *Socket) close() {
+func (s *Socket) Close() {
 	if s.conn != nil {
 		s.conn.Close()
 	}
 }
 
-func (s *Socket) write(message string) {
+func (s *Socket) Write(message string) {
 	if s.conn == nil {
-		s.connect(s.addr, s.port)
+		s.Connect(s.addr, s.port)
 	}
 
 	fmt.Fprintf(s.conn, message)
 	s.printout("Message sent : " + message)
 }
 
-func (s *Socket) read() string {
+func (s *Socket) ReadString() string {
 	if s.conn == nil {
-		s.connect(s.addr, s.port)
+		s.Connect(s.addr, s.port)
 	}
 
 	// TODO: Make this generic, read whatever comes
@@ -57,13 +57,14 @@ func (s *Socket) read() string {
 	return message
 }
 
-func main() {
-	test := Socket{}
-	test.connect("localhost", "8081")
+func (s *Socket) ReadJson() string {
+	if s.conn == nil {
+		s.Connect(s.addr, s.port)
+	}
 
-	test.write("Is there anyone here ?")
-	test.read()
+	// TODO: Make this generic, read whatever comes
+	message, _ := bufio.NewReader(s.conn).ReadString('}')
 
-	fmt.Println("Program closes")
-	test.close()
+	s.printout("Message received : " + message)
+	return message
 }
