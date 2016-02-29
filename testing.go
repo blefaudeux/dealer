@@ -7,11 +7,12 @@ import (
 
 func main() {
 	test := dealer.Socket{}
-	test.connect("localhost", "8081")
+	test.Connect("localhost", "8081")
 
-	test.write("Is there anyone here ?")
-	test.readString()
+	test.Send("Is there anyone here ?")
+	jResponse := test.ReadJson()
 
+	fmt.Println(jResponse)
 	fmt.Println("Program closes")
-	test.close()
+	test.Close()
 }

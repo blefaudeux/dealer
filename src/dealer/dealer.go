@@ -3,6 +3,7 @@ package dealer
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
 )
@@ -12,6 +13,7 @@ type Socket struct {
 	conn       net.Conn
 }
 
+// (private) just a quick output formatting
 func (s *Socket) printout(message string) {
 	fmt.Println("Socket " + s.addr + ":" + s.port + " : " + message)
 }
@@ -36,7 +38,7 @@ func (s *Socket) Close() {
 	}
 }
 
-func (s *Socket) Write(message string) {
+func (s *Socket) Send(message string) {
 	if s.conn == nil {
 		s.Connect(s.addr, s.port)
 	}
@@ -45,26 +47,36 @@ func (s *Socket) Write(message string) {
 	s.printout("Message sent : " + message)
 }
 
-func (s *Socket) ReadString() string {
+// Read until new line
+func (s *Socket) ReadLine() string {
 	if s.conn == nil {
 		s.Connect(s.addr, s.port)
 	}
 
-	// TODO: Make this generic, read whatever comes
-	message, _ := bufio.NewReader(s.conn).ReadString('}')
+	message, err := bufio.NewReader(s.conn).ReadString('\n')
+	if err != nil {
+		s.printout("Error reading socket : " + err.Error())
+		return ""
+	}
 
 	s.printout("Message received : " + message)
 	return message
 }
 
-func (s *Socket) ReadJson() string {
+func (s *Socket) ReadJson() interface{} {
 	if s.conn == nil {
 		s.Connect(s.addr, s.port)
 	}
 
-	// TODO: Make this generic, read whatever comes
-	message, _ := bufio.NewReader(s.conn).ReadString('}')
+	// we create a decoder that reads directly from the socket
+	d := json.NewDecoder(s.conn)
 
-	s.printout("Message received : " + message)
-	return message
+	var msg interface{}
+
+	err := d.Decode(&msg)
+	fmt.Println(msg, err)
+
+	pretty_print, _ := json.MarshalIndent(msg, "", "\t")
+	s.printout("Message received : " + string(pretty_print))
+	return msg
 }
