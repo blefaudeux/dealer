@@ -10,9 +10,8 @@ func main() {
 	test.Connect("localhost", "8081")
 
 	test.Send("Is there anyone here ?")
-	jResponse := test.ReadJson()
+	_ = test.ReadJson()
 
-	fmt.Println(jResponse)
 	fmt.Println("Program closes")
 	test.Close()
 }

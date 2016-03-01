@@ -11,6 +11,7 @@ import (
 type Socket struct {
 	addr, port string
 	conn       net.Conn
+	letterbox  chan JsonResponse
 }
 
 // (private) just a quick output formatting
@@ -63,7 +64,8 @@ func (s *Socket) ReadLine() string {
 	return message
 }
 
-func (s *Socket) ReadJson() interface{} {
+// Read one Json object only
+func (s *Socket) ReadJson() JsonResponse {
 	if s.conn == nil {
 		s.Connect(s.addr, s.port)
 	}
@@ -72,11 +74,35 @@ func (s *Socket) ReadJson() interface{} {
 	d := json.NewDecoder(s.conn)
 
 	var msg interface{}
+	_ = d.Decode(&msg)
+	fmt.Println(msg)
 
-	err := d.Decode(&msg)
-	fmt.Println(msg, err)
+	var msgJson JsonResponse
+	//	if err := json.Unmarshal(msg, &msgJson); err != nil {
+	//		s.printout("ERROR : could not decode Json message - " + msg)
+	//		panic(err)
+	//	}
 
 	pretty_print, _ := json.MarshalIndent(msg, "", "\t")
 	s.printout("Message received : " + string(pretty_print))
-	return msg
+	return msgJson
+}
+
+// Populates the letterbox channel
+func (s *Socket) read() {
+	newMessage := s.ReadJson()
+
+	// TODO: Test message validity
+	s.letterbox <- newMessage
+}
+
+// Return the message corresponding to the given ID, when it arrives
+func (s *Socket) ReadBlock(reqId string) JsonResponse {
+	for {
+		testMessage := <-s.letterbox
+
+		if testMessage.id == reqId {
+			return testMessage
+		}
+	}
 }

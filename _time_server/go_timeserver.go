@@ -1,5 +1,5 @@
 // time_server.go
-// Just issue json formatted time for every clients
+// Just issue json formatted time for every client
 package main
 
 import (
@@ -12,7 +12,7 @@ import (
 
 func serveTime(conn net.Conn, id int) {
 	for {
-		message := map[string]string{"reqId": "0", "time": strconv.Itoa(time.Now().Second())}
+		message := map[string]string{"id": strconv.Itoa(id), "time": strconv.Itoa(time.Now().Second())}
 		fmt.Println("Time is : " + message["time"] + " (client " + strconv.Itoa(id) + ")")
 		mByte, _ := json.Marshal(message)
 		conn.Write(mByte)
@@ -25,7 +25,7 @@ func main() {
 	// listen on all interfaces
 	ln, _ := net.Listen("tcp", "localhost:8081")
 
-	id := 0
+	id := 1
 
 	for {
 		fmt.Println("Server ready, awaiting connection")
