@@ -11,7 +11,7 @@ import (
 type Socket struct {
 	addr, port string
 	conn       net.Conn
-	letterbox  chan JsonResponse
+	letterbox  chan map[string]interface{}
 }
 
 // (private) just a quick output formatting
@@ -19,6 +19,7 @@ func (s *Socket) printout(message string) {
 	fmt.Println("Socket " + s.addr + ":" + s.port + " : " + message)
 }
 
+// Connect to a TCP socket
 func (s *Socket) Connect(addr string, port string) {
 	s.addr = addr
 	s.port = port
@@ -39,6 +40,7 @@ func (s *Socket) Close() {
 	}
 }
 
+// Send a string asap
 func (s *Socket) Send(message string) {
 	if s.conn == nil {
 		s.Connect(s.addr, s.port)
@@ -65,7 +67,7 @@ func (s *Socket) ReadLine() string {
 }
 
 // Read one Json object only
-func (s *Socket) ReadJson() JsonResponse {
+func (s *Socket) ReadJson() map[string]interface{} {
 	if s.conn == nil {
 		s.Connect(s.addr, s.port)
 	}
@@ -73,36 +75,36 @@ func (s *Socket) ReadJson() JsonResponse {
 	// we create a decoder that reads directly from the socket
 	d := json.NewDecoder(s.conn)
 
-	var msg interface{}
+	var msg map[string]interface{}
 	_ = d.Decode(&msg)
 	fmt.Println(msg)
 
-	var msgJson JsonResponse
-	//	if err := json.Unmarshal(msg, &msgJson); err != nil {
-	//		s.printout("ERROR : could not decode Json message - " + msg)
-	//		panic(err)
-	//	}
-
 	pretty_print, _ := json.MarshalIndent(msg, "", "\t")
 	s.printout("Message received : " + string(pretty_print))
-	return msgJson
+	return msg
 }
 
 // Populates the letterbox channel
 func (s *Socket) read() {
 	newMessage := s.ReadJson()
 
-	// TODO: Test message validity
-	s.letterbox <- newMessage
+	if len(newMessage) > 0 {
+		s.letterbox <- newMessage
+	}
 }
 
 // Return the message corresponding to the given ID, when it arrives
-func (s *Socket) ReadBlock(reqId string) JsonResponse {
+func (s *Socket) ReadBlock(reqId string) map[string]interface{} {
+	go s.read()
+
 	for {
 		testMessage := <-s.letterbox
 
-		if testMessage.id == reqId {
+		if testMessage["id"] == reqId {
 			return testMessage
+		} else {
+			pretty_print, _ := json.MarshalIndent(testMessage, "", "\t")
+			s.printout("Message rejected : " + string(pretty_print))
 		}
 	}
 }
