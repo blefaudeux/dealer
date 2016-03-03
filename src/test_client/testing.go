@@ -8,13 +8,13 @@ import (
 
 func main() {
 	test := dealer.Socket{}
-	test.Connect("localhost", "8081")
+	test.Connect("localhost", "8082")
 
 	mess := map[string]string{"id": "5", "content": "This is a test"}
 	mess_bytes, _ := json.Marshal(mess)
 	test.SendBytes(mess_bytes)
 
-	_ = test.ReadBlock("4")
+	_ = test.ReadBlock("5")
 
 	fmt.Println("Program closes")
 	test.Close()

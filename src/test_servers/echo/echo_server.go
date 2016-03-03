@@ -11,8 +11,10 @@ import (
 
 func serveEcho(conn net.Conn, id int) {
 	for {
-		message, err := bufio.NewReader(conn).ReadString('}')
-		if err == nil {
+		message, _ := bufio.NewReader(conn).ReadString('}')
+		if len(message) > 0 {
+			fmt.Println("Message received : " + message)
+			fmt.Println("> Echoing")
 			conn.Write([]byte(message))
 		}
 	}
@@ -20,7 +22,7 @@ func serveEcho(conn net.Conn, id int) {
 
 func main() {
 
-	ln, _ := net.Listen("tcp", "localhost:8081")
+	ln, _ := net.Listen("tcp", "localhost:8082")
 	id := 0
 
 	for {
