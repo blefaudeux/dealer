@@ -11,6 +11,7 @@ import (
 type Socket struct {
 	addr, port string
 	conn       net.Conn
+	d          *json.Decoder
 	letterbox  chan map[string]interface{}
 }
 
@@ -31,6 +32,8 @@ func (s *Socket) Connect(addr string, port string) {
 		return
 	}
 	s.conn = conn
+	s.d = json.NewDecoder(s.conn)
+
 	s.printout("Connection accepted")
 }
 
@@ -50,6 +53,15 @@ func (s *Socket) Send(message string) {
 	s.printout("Message sent : " + message)
 }
 
+// Send a string asap
+func (s *Socket) SendBytes(message []byte) {
+	if s.conn == nil {
+		s.Connect(s.addr, s.port)
+	}
+
+	s.conn.Write(message)
+}
+
 // Read until new line
 func (s *Socket) ReadLine() string {
 	if s.conn == nil {
@@ -62,7 +74,6 @@ func (s *Socket) ReadLine() string {
 		return ""
 	}
 
-	s.printout("Message received : " + message)
 	return message
 }
 
@@ -72,15 +83,11 @@ func (s *Socket) ReadJson() map[string]interface{} {
 		s.Connect(s.addr, s.port)
 	}
 
-	// we create a decoder that reads directly from the socket
-	d := json.NewDecoder(s.conn)
+	// We create a decoder that reads directly from the socket
 
 	var msg map[string]interface{}
-	_ = d.Decode(&msg)
-	fmt.Println(msg)
+	_ = s.d.Decode(&msg)
 
-	pretty_print, _ := json.MarshalIndent(msg, "", "\t")
-	s.printout("Message received : " + string(pretty_print))
 	return msg
 }
 
@@ -102,9 +109,6 @@ func (s *Socket) ReadBlock(reqId string) map[string]interface{} {
 
 		if testMessage["id"] == reqId {
 			return testMessage
-		} else {
-			pretty_print, _ := json.MarshalIndent(testMessage, "", "\t")
-			s.printout("Message rejected : " + string(pretty_print))
 		}
 	}
 }

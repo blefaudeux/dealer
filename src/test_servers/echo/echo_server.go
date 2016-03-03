@@ -1,28 +1,26 @@
-// time_server.go
+// echo_server.go
 // Just issue json formatted time for every client
 package main
 
 import (
-	"encoding/json"
+	"bufio"
 	"fmt"
 	"net"
 	"strconv"
-	"time"
 )
 
 func serveEcho(conn net.Conn, id int) {
 	for {
-  		message, _ := bufio.NewReader(conn).ReadString('\n')
-		fmt.Print("Message Received:", string(message))
-		newmessage := strings.ToUpper(message)
-		conn.Write([]byte(newmessage + "\n"))   } 
+		message, err := bufio.NewReader(conn).ReadString('}')
+		if err == nil {
+			conn.Write([]byte(message))
+		}
 	}
 }
 
 func main() {
 
-	ln, _ := net.Listen("tcp", "localhost:8081") // listen on all interfaces
-
+	ln, _ := net.Listen("tcp", "localhost:8081")
 	id := 0
 
 	for {
