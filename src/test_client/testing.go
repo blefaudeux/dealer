@@ -50,7 +50,7 @@ func main() {
 	messBytes, _ := json.Marshal(mess)
 
 	test.SendBytes(messBytes)
-	_ = test.ReadBlock("5")
+	_ = test.ReadBlock("id", "5")
 
 	// Benchmark
 	fmt.Println("\nStarting benchmark")
@@ -63,7 +63,7 @@ func main() {
 		start := time.Now()
 		for i := 0; i < numberOfRuns; i++ {
 			test.SendBytes(messBytes)
-			_ = test.ReadBlock("5")
+			_ = test.ReadBlock("id", "5")
 		}
 
 		elapsed := time.Since(start)
