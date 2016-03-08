@@ -12,9 +12,8 @@ import (
 func serveEcho(conn net.Conn, id int) {
 	for {
 		message, _ := bufio.NewReader(conn).ReadString('}')
+
 		if len(message) > 0 {
-			fmt.Println("Message received : " + message)
-			fmt.Println("> Echoing")
 			conn.Write([]byte(message))
 		}
 	}
