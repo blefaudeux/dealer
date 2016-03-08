@@ -26,8 +26,9 @@ func echo() {
 	id := 0
 
 	for {
+		// Blocking call, awaiting client
 		fmt.Println("Server ready, awaiting connection")
-		conn, _ := ln.Accept() // Blocking call, awaiting client
+		conn, _ := ln.Accept()
 
 		// Start the echo routine, and go back waiting for a new connection
 		fmt.Println("Server got a new client : " + strconv.Itoa(id))
@@ -53,7 +54,8 @@ func main() {
 	_ = test.ReadBlock("id", "5")
 
 	// Benchmark
-	fmt.Println("\nStarting benchmark")
+	fmt.Printf("\n----------------\n")
+	fmt.Println("Starting benchmark")
 	numberOfRuns := 500
 	numberOfBenchs := 10
 
@@ -68,7 +70,7 @@ func main() {
 
 		elapsed := time.Since(start)
 		runtime[j] = float64(numberOfRuns) / elapsed.Seconds()
-		fmt.Printf("Processed %.2f requests per second\n", runtime[j])
+		fmt.Printf("Processed %.0f requests per second\n", runtime[j])
 	}
 
 	fmt.Printf("\n----------------\n")
@@ -79,10 +81,10 @@ func main() {
 	}
 
 	avg /= float64(numberOfBenchs)
-	fmt.Printf("Processed %.2f requests per second on average\n", avg)
+	fmt.Printf("Processed on average %.0f requests per second\n", avg)
 
 	delay := 1000. / avg
-	fmt.Printf("corresponding to %.2f ms delay\n", delay)
+	fmt.Printf("corresponding to %.3f ms delay\n", delay)
 
 	test.Close()
 }

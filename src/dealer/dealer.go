@@ -15,9 +15,11 @@ import (
 type Socket struct {
 	addr, port string
 	conn       net.Conn
-	letterbox  chan map[string]interface{}
-	decoder    *json.Decoder
-	dooze      chan bool
+	mailbox    chan map[string]interface{}
+	archive    chan map[string]interface{}
+
+	decoder *json.Decoder
+	dooze   chan bool
 }
 
 // (private) just a quick output formatting
@@ -37,7 +39,8 @@ func (s *Socket) Connect(addr string, port string) error {
 		return err
 	}
 
-	s.letterbox = make(chan map[string]interface{})
+	s.mailbox = make(chan map[string]interface{})
+	s.archive = make(chan map[string]interface{})
 	s.dooze = make(chan bool)
 
 	s.conn = conn
@@ -87,7 +90,8 @@ func (s *Socket) ReadLine() string {
 	return message
 }
 
-// ReadJSON : one Json object only
+// ReadJSON : read one Json object and return.
+// Blocking until the object appears on the socket
 func (s *Socket) ReadJSON() map[string]interface{} {
 	if s.conn == nil {
 		s.Connect(s.addr, s.port)
@@ -102,15 +106,16 @@ func (s *Socket) ReadJSON() map[string]interface{} {
 	return msg
 }
 
-// Populates the letterbox channel. Used as a goroutine
+// Populates the mailbox channel. Used as a goroutine
 func (s *Socket) read() {
 	newMessage := s.ReadJSON()
 
 	if len(newMessage) > 0 {
-		s.letterbox <- newMessage
+		s.mailbox <- newMessage
 	}
 
 	select {
+	// If the parent functions calls for a sleep
 	case <-s.dooze:
 		return
 	}
@@ -120,8 +125,11 @@ func (s *Socket) read() {
 func (s *Socket) ReadBlock(field string, value string) map[string]interface{} {
 	go s.read()
 
+	// TODO: Check first that the message was not already received
+	// (should be in the archive channel)
+
 	for {
-		testMessage := <-s.letterbox
+		testMessage := <-s.mailbox
 
 		if testMessage[field] == value {
 			s.dooze <- true
