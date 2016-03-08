@@ -1,21 +1,88 @@
 package main
 
 import (
+	"bufio"
 	"dealer"
 	"encoding/json"
 	"fmt"
+	"net"
+	"strconv"
+	"time"
 )
 
+func serveEcho(conn net.Conn, id int) {
+	for {
+		message, _ := bufio.NewReader(conn).ReadString('}')
+
+		if len(message) > 0 {
+			conn.Write([]byte(message))
+		}
+	}
+}
+
+func echo() {
+
+	ln, _ := net.Listen("tcp", "localhost:8082")
+	id := 0
+
+	for {
+		fmt.Println("Server ready, awaiting connection")
+		conn, _ := ln.Accept() // Blocking call, awaiting client
+
+		// Start the echo routine, and go back waiting for a new connection
+		fmt.Println("Server got a new client : " + strconv.Itoa(id))
+		go serveEcho(conn, id)
+		id = id + 1
+	}
+}
+
 func main() {
+	// Start the Echo Server through a go routine
+	go echo()
+	time.Sleep(time.Second)
+
+	// Connect our client
 	test := dealer.Socket{}
 	test.Connect("localhost", "8082")
 
+	// Warmup
 	mess := map[string]string{"id": "5", "content": "This is a test"}
-	mess_bytes, _ := json.Marshal(mess)
-	test.SendBytes(mess_bytes)
+	messBytes, _ := json.Marshal(mess)
 
-	_ = test.ReadBlock("5")
+	test.SendBytes(messBytes)
+	_ = test.ReadBlock("id", "5")
 
-	fmt.Println("Program closes")
+	// Benchmark
+	fmt.Println("\nStarting benchmark")
+	numberOfRuns := 500
+	numberOfBenchs := 10
+
+	var runtime = make([]float64, numberOfBenchs)
+
+	for j := 0; j < numberOfBenchs; j++ {
+		start := time.Now()
+		for i := 0; i < numberOfRuns; i++ {
+			test.SendBytes(messBytes)
+			_ = test.ReadBlock("id", "5")
+		}
+
+		elapsed := time.Since(start)
+		runtime[j] = float64(numberOfRuns) / elapsed.Seconds()
+		fmt.Printf("Processed %.2f requests per second\n", runtime[j])
+	}
+
+	fmt.Printf("\n----------------\n")
+	fmt.Print("Runs completed.\n")
+	avg := 0.
+	for _, val := range runtime {
+		avg += val
+	}
+
+	avg /= float64(numberOfBenchs)
+	fmt.Printf("Processed %.2f requests per second on average\n", avg)
+
+	delay := 1000. / avg
+	fmt.Printf("corresponding to %.2f ms delay\n", delay)
+
 	test.Close()
 }

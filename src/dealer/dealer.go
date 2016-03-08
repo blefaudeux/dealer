@@ -1,4 +1,7 @@
-// dealer.go
+// Package dealer :
+// Implements a TCP client with read/write calls, based on Json requests.
+// Read calls can be blocking, in which case the call will return when a message with the given field
+// and value is received.
 package dealer
 
 import (
@@ -8,6 +11,7 @@ import (
 	"net"
 )
 
+// The Socket client handling all further requests
 type Socket struct {
 	addr, port string
 	conn       net.Conn
@@ -21,7 +25,7 @@ func (s *Socket) printout(message string) {
 	fmt.Println("Socket " + s.addr + ":" + s.port + " : " + message)
 }
 
-// Connect to a TCP socket
+// Connect to a TCP Socket
 func (s *Socket) Connect(addr string, port string) error {
 	s.addr = addr
 	s.port = port
@@ -42,6 +46,7 @@ func (s *Socket) Connect(addr string, port string) error {
 	return nil
 }
 
+// Close : Clean up the stage and leave
 func (s *Socket) Close() {
 	if s.conn != nil {
 		s.conn.Close()
@@ -58,7 +63,7 @@ func (s *Socket) Send(message string) {
 	s.printout("Message sent : " + message)
 }
 
-// Send a binary asap
+// SendBytes :  a binary asap
 func (s *Socket) SendBytes(message []byte) {
 	if s.conn == nil {
 		s.Connect(s.addr, s.port)
@@ -67,7 +72,7 @@ func (s *Socket) SendBytes(message []byte) {
 	s.conn.Write(message)
 }
 
-// Read until new line
+// ReadLine : until new line symbol
 func (s *Socket) ReadLine() string {
 	if s.conn == nil {
 		s.Connect(s.addr, s.port)
@@ -75,15 +80,15 @@ func (s *Socket) ReadLine() string {
 
 	message, err := bufio.NewReader(s.conn).ReadString('\n')
 	if err != nil {
-		s.printout("Error reading socket : " + err.Error())
+		s.printout("Error reading Socket : " + err.Error())
 		return ""
 	}
 
 	return message
 }
 
-// Read one Json object only
-func (s *Socket) ReadJson() map[string]interface{} {
+// ReadJSON : one Json object only
+func (s *Socket) ReadJSON() map[string]interface{} {
 	if s.conn == nil {
 		s.Connect(s.addr, s.port)
 	}
@@ -99,7 +104,7 @@ func (s *Socket) ReadJson() map[string]interface{} {
 
 // Populates the letterbox channel. Used as a goroutine
 func (s *Socket) read() {
-	newMessage := s.ReadJson()
+	newMessage := s.ReadJSON()
 
 	if len(newMessage) > 0 {
 		s.letterbox <- newMessage
@@ -111,14 +116,14 @@ func (s *Socket) read() {
 	}
 }
 
-// Return the message corresponding to the given ID, when it arrives
-func (s *Socket) ReadBlock(reqId string) map[string]interface{} {
+// ReadBlock : Return the message corresponding to the given ID, when it arrives
+func (s *Socket) ReadBlock(field string, value string) map[string]interface{} {
 	go s.read()
 
 	for {
 		testMessage := <-s.letterbox
 
-		if testMessage["id"] == reqId {
+		if testMessage[field] == value {
 			s.dooze <- true
 			return testMessage
 		}
