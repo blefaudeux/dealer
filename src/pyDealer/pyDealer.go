@@ -1,49 +1,52 @@
 // See https://blog.filippo.io/building-python-modules-with-go-1-5/#thecompletedemosource
 // and https://gopy.qur.me/extensions/examples.html
 
-
 package main
 
 import (
-	"bufio"
 	"dealer"
-	"encoding/json"
 	"fmt"
-  "gopy"
-	"net"
-	"strconv"
-	"time"
 )
 
-struct PySocket {
-  socket  dealer.Socket
-  port    string
-  address string
+// #cgo pkg-config: python3
+// #define Py_LIMITED_API
+// #include <Python.h>
+import "C"
+
+//export GoSocket
+type GoSocket struct {
+	socket  dealer.Socket
+	port    string
+	address string
 }
 
-func Connect(s *PySocket, args *py.Tuple)(err Error) {
-  // Parse python arguments
-  var o py.Object
-  if err := py.ParseTuple(args, "O", &o); err != nil {
-    fmt.Println("Error parsing arguments")
-  }
+//export Connect
+func Connect(s *GoSocket, address *C.PyObject, port *C.PyObject) (err Error) {
 
-  // Connect dealer
-  s.socket = dealer.Socket{}
-  if err = s.socket.Connect( o[0], o[1]); err != nil {
-    fmt.Println("Error creating the socket")
-  }
+	s.address = C.GoString(address)
+	s.port = C.GoString(port)
+
+	fmt.Println("Connecting to {} {}".format(s.address, s.port))
+
+	// Connect dealer
+	s.socket = dealer.Socket{}
+	if err = s.socket.Connect(address, port); err != nil {
+		fmt.Println("Error creating the socket")
+	}
 }
 
-func Read(s * PySocket, list *py.List) (error Error){
-  // TODO: Ben
-  // We need to grab the ID here, and do a ReadJSON on the dealer socket
+//export Read
+func Read(s *GoSocket, list *py.List) (error Error) {
+	// TODO: Ben
+	// We need to grab the ID here, and do a ReadJSON on the dealer socket
 }
 
-func Send(s * PySocket, list *py.List) (error Error){
-  // TODO: Ben
+//export Send
+func Send(s *GoSocket, list *py.List) (error Error) {
+	// TODO: Ben
 }
 
-func Close(s *PySocket) {
-  s.socket.Close()
+//export Close
+func Close(s *GoSocket) {
+	s.socket.Close()
 }
