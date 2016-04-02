@@ -1,0 +1,3 @@
+main	/home/benjamin/Git/dealer/src/test_client/testing.go	/^package main$/;"	package	line:1
+main	/home/benjamin/Git/dealer/src/test_client/testing.go	/^func main() {$/;"	func	line:11
+main	/home/benjamin/Git/dealer/src/test_client/testing.go	/^func main() {$/;"	func	line:11

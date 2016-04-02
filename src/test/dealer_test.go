@@ -1,4 +1,4 @@
-package main
+package testClient
 
 import (
 	"bufio"
@@ -8,9 +8,10 @@ import (
 	"net"
 	"strconv"
 	"time"
+  "testing"
 )
 
-func serveEcho(conn net.Conn, id int) {
+func serveEcho(conn net.Conn) {
 	for {
 		message, _ := bufio.NewReader(conn).ReadString('}')
 
@@ -21,7 +22,6 @@ func serveEcho(conn net.Conn, id int) {
 }
 
 func echo() {
-
 	ln, _ := net.Listen("tcp", "localhost:8082")
 	id := 0
 
@@ -32,13 +32,15 @@ func echo() {
 
 		// Start the echo routine, and go back waiting for a new connection
 		fmt.Println("Server got a new client : " + strconv.Itoa(id))
-		go serveEcho(conn, id)
+		go serveEcho(conn)
 		id = id + 1
 	}
 }
 
-func main() {
-	// Start the Echo Server through a go routine
+// BenchmarkRPS : Test the number of requests per second handled by our client
+func BenchmarkRPS(b *testing.B) {
+
+  // Start the Echo Server through a go routine
 	go echo()
 	time.Sleep(time.Second)
 
@@ -56,7 +58,7 @@ func main() {
 	// Benchmark
 	fmt.Printf("\n----------------\n")
 	fmt.Println("Starting benchmark")
-	numberOfRuns := 500
+	numberOfRuns := b.N
 	numberOfBenchs := 10
 
 	var runtime = make([]float64, numberOfBenchs)
