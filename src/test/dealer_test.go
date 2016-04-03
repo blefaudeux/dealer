@@ -1,14 +1,14 @@
-package testClient
+package test
 
 import (
 	"bufio"
 	"dealer"
 	"encoding/json"
-	"fmt"
+    "fmt"
 	"net"
 	"strconv"
 	"time"
-  "testing"
+    "testing"
 )
 
 func serveEcho(conn net.Conn) {
@@ -21,8 +21,8 @@ func serveEcho(conn net.Conn) {
 	}
 }
 
-func echo() {
-	ln, _ := net.Listen("tcp", "localhost:8082")
+func echo(host, port string) {
+	ln, _ := net.Listen("tcp", host + ":" + port)
 	id := 0
 
 	for {
@@ -39,9 +39,11 @@ func echo() {
 
 // BenchmarkRPS : Test the number of requests per second handled by our client
 func BenchmarkRPS(b *testing.B) {
-
-  // Start the Echo Server through a go routine
-	go echo()
+    host := "localhost"
+    port := "8082"
+    
+    // Start our echo test server
+    go echo(host, port)
 	time.Sleep(time.Second)
 
 	// Connect our client
