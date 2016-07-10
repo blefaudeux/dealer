@@ -52,60 +52,58 @@ func (s *Socket) Close() {
 	}
 }
 
-// Send a string asap
-func (s *Socket) Send(message string) {
+// SendBytes : send a binary asap
+func (s *Socket) SendBytes(message []byte) error {
 	if s.conn == nil {
-		s.Connect(s.addr, s.port)
-	}
-
-	fmt.Fprintf(s.conn, message)
-}
-
-// SendBytes :  a binary asap
-func (s *Socket) SendBytes(message []byte) {
-	if s.conn == nil {
-		s.Connect(s.addr, s.port)
+		if err := s.Connect(s.addr, s.port); err != nil {
+			return err
+		}
 	}
 
 	s.conn.Write(message)
+	return nil
 }
 
 // ReadLine : until new line symbol
-func (s *Socket) ReadLine() string {
+func (s *Socket) ReadLine() (string, error) {
 	if s.conn == nil {
-		s.Connect(s.addr, s.port)
+		if err := s.Connect(s.addr, s.port); err != nil {
+			return "", err
+		}
 	}
 
 	msg, err := bufio.NewReader(s.conn).ReadString('\n')
 
 	if err != nil {
 		s.printout("Error reading Socket : " + err.Error())
-		return ""
+		return "", err
 	}
 
-	return msg
+	return msg, nil
 }
 
 // ReadJSON : read one Json object and return.
 // Blocking until the object appears on the socket
-func (s *Socket) ReadJSON() map[string]interface{} {
+func (s *Socket) ReadJSON() (map[string]interface{}, error) {
 	if s.conn == nil {
-		s.Connect(s.addr, s.port)
+		if err := s.Connect(s.addr, s.port); err != nil {
+			return nil, err
+		}
 	}
 
 	var msg map[string]interface{}
 
 	if err := s.decoder.Decode(&msg); err != nil {
-		s.printout("Error decoding just received json object")
+		return nil, err
 	}
 
-	return msg
+	return msg, nil
 }
 
 // Populates the mailbox channel. Used as a goroutine
 func (s *Socket) read(stop <-chan bool, mailbox chan<- map[string]interface{}) {
 	for {
-		newMessage := s.ReadJSON()
+		newMessage, _ := s.ReadJSON()
 
 		if len(newMessage) > 0 {
 			mailbox <- newMessage
