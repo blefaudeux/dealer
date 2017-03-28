@@ -2,7 +2,6 @@ package dealer
 
 import (
 	"bufio"
-	"dealer"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -37,6 +36,28 @@ func echo(host, port string) {
 	}
 }
 
+// System test
+func TestConnection(t *testing.T) {
+	host := "localhost"
+	port := "8082"
+
+	// Start our echo test server
+	go echo(host, port)
+	time.Sleep(time.Second)
+
+	// Connect our client
+	test := Socket{}
+	test.Connect("localhost", "8082")
+
+	// Warmup
+	mess := map[string]string{"id": "5", "content": "This is a test"}
+	messBytes, _ := json.Marshal(mess)
+
+	test.SendBytes(messBytes)
+	_ = test.ReadBlock("id", "5")
+
+}
+
 // BenchmarkRPS : Test the number of requests per second handled by our client
 func BenchmarkRPS(b *testing.B) {
 	host := "localhost"
@@ -47,7 +68,7 @@ func BenchmarkRPS(b *testing.B) {
 	time.Sleep(time.Second)
 
 	// Connect our client
-	test := dealer.Socket{}
+	test := Socket{}
 	test.Connect("localhost", "8082")
 
 	// Warmup
