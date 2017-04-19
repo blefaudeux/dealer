@@ -7,31 +7,43 @@ package dealer
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
+	"strconv"
+	"time"
 )
 
 // The Socket client handling all further requests
 type Socket struct {
-	addr, port string
-	conn       net.Conn
+	addr string
+	port int
+	conn net.Conn
 
-	archive chan map[string]interface{}
+	// archive chan map[string]interface{}
 	decoder *json.Decoder
 	dooze   chan bool
 }
 
+func (s *Socket) getConnectionParameters() string {
+	return s.addr + ":" + strconv.Itoa(s.port)
+}
+
 // (private) just a quick output formatting
 func (s *Socket) printout(message string) {
-	fmt.Println("Socket " + s.addr + ":" + s.port + " : " + message)
+	fmt.Println("Socket " + s.getConnectionParameters() + " : " + message)
+}
+
+// (private) reconnect given known settings
+func (s *Socket) autoConnect() error {
+	return s.Connect(s.addr, s.port)
 }
 
 // Connect to a TCP Socket
-func (s *Socket) Connect(addr string, port string) error {
+func (s *Socket) Connect(addr string, port int) error {
 	s.addr = addr
 	s.port = port
-	conn, err := net.Dial("tcp", s.addr+":"+s.port)
-	s.archive = make(chan map[string]interface{})
+	conn, err := net.Dial("tcp", s.getConnectionParameters())
 
 	if err != nil {
 		s.printout("Error connecting")
@@ -55,7 +67,7 @@ func (s *Socket) Close() {
 // SendBytes : send a binary asap
 func (s *Socket) SendBytes(message []byte) error {
 	if s.conn == nil {
-		if err := s.Connect(s.addr, s.port); err != nil {
+		if err := s.autoConnect(); err != nil {
 			return err
 		}
 	}
@@ -67,7 +79,7 @@ func (s *Socket) SendBytes(message []byte) error {
 // ReadLine : until new line symbol
 func (s *Socket) ReadLine() (string, error) {
 	if s.conn == nil {
-		if err := s.Connect(s.addr, s.port); err != nil {
+		if err := s.autoConnect(); err != nil {
 			return "", err
 		}
 	}
@@ -86,7 +98,7 @@ func (s *Socket) ReadLine() (string, error) {
 // Blocking until the object appears on the socket
 func (s *Socket) ReadJSON() (map[string]interface{}, error) {
 	if s.conn == nil {
-		if err := s.Connect(s.addr, s.port); err != nil {
+		if err := s.autoConnect(); err != nil {
 			return nil, err
 		}
 	}
@@ -103,9 +115,7 @@ func (s *Socket) ReadJSON() (map[string]interface{}, error) {
 // Populates the mailbox channel. Used as a goroutine
 func (s *Socket) read(stop <-chan bool, mailbox chan<- map[string]interface{}) {
 	for {
-		newMessage, _ := s.ReadJSON()
-
-		if len(newMessage) > 0 {
+		if newMessage, _ := s.ReadJSON(); len(newMessage) > 0 {
 			mailbox <- newMessage
 		}
 
@@ -118,23 +128,23 @@ func (s *Socket) read(stop <-chan bool, mailbox chan<- map[string]interface{}) {
 }
 
 // ReadBlock : Return the message corresponding to the given ID, when it arrives
-func (s *Socket) ReadBlock(field string, value string) map[string]interface{} {
+func (s *Socket) ReadBlock(field string, value string, timeout int) (map[string]interface{}, error) {
 
 	mailbox := make(chan map[string]interface{})
 	dooze := make(chan bool)
 
 	go s.read(dooze, mailbox)
 
-	// TODO: Go through the archive channel first ?
-
 	for {
-		testMessage := <-mailbox
-
-		if testMessage[field] == value {
-			dooze <- true
-			return testMessage
+		select {
+		case testMessage := <-mailbox:
+			if testMessage[field] == value {
+				dooze <- true
+				return testMessage, nil
+			}
+		case <-time.After(time.Second * time.Duration(timeout)):
+			dooze <- true // Not needed strictly speaking, stop the goroutine
+			return make(map[string]interface{}), errors.New("Timeout")
 		}
-
-		s.archive <- testMessage
 	}
 }
